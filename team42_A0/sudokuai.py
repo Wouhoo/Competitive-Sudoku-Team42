@@ -23,17 +23,19 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         # Make sure we have an initial valid move, otherwise we lose the game.
         self.propose_move(random.choice(legal_moves))
 
+        is_maximizing = game_state.current_player == 1
         scores = {}
         for i, move in enumerate(legal_moves):
             new_state = _make_move(game_state, move)
-            # TODO Currently hardcodes search depth to 5, implement iterative deepening.
-            score = _minimax(new_state, depth=4, is_maximizing=game_state.current_player == 1)
+            # TODO Currently hardcodes search depth, implement iterative deepening.
+            score = _minimax(new_state, depth=8, is_maximizing=is_maximizing)
             scores[i] = score
 
         # If all scores are the same, keep the random move.
         if len(set(scores.values())) > 1:
             # Sort indices for legal_moves by score in decreasing order
-            best_move_idx = sorted(scores, key=scores.get, reverse=True)[0]
+            ranked_move_idxs = sorted(scores, key=scores.get, reverse=True)
+            best_move_idx = ranked_move_idxs[0] if is_maximizing else ranked_move_idxs[-1]
             self.propose_move(legal_moves[best_move_idx])
 
 
