@@ -1,9 +1,9 @@
 from competitive_sudoku.sudoku import GameState, Move, SudokuBoard, TabooMove, Square
 
 def check_legal_moves(game_state: GameState) -> list[Move]:
-    '''
+    """
     Checks which moves are legal for the given game state and return them as a list of Moves
-    '''
+    """
     N = game_state.board.N
     allowed_squares = GameState.player_squares(game_state)
     legal_moves = []
@@ -41,14 +41,15 @@ def get_column(board: SudokuBoard, square: Square) -> list[int]:
 
 def get_region(board: SudokuBoard, square: Square) -> list[int]:
     # Returns all numbers present in the region that square is in
-    return [board.get((square[0]//board.m + i, square[1]//board.n + j)) for j in range(board.n) for i in range(board.m)]
+    region_row, region_col = square[0]//board.m * board.m, square[1]//board.n * board.n
+    return [board.get((region_row + i, region_col + j)) for j in range(board.n) for i in range(board.m)]
 
 ### DEBUG ###
-from competitive_sudoku.sudoku import parse_game_state
-import os
-
-path = os.path.join(os.getcwd(), r"..\\boards\\empty-2x3.txt")
-board_file = open(path, "r")
-test_state = parse_game_state(board_file.read(), playmode="classic")
-
-print(get_row(test_state.board, (2,3)))
+# from competitive_sudoku.sudoku import parse_game_state
+# import os
+#
+# path = os.path.join(os.getcwd(), r"..\\boards\\empty-2x3.txt")
+# board_file = open(path, "r")
+# test_state = parse_game_state(board_file.read(), playmode="classic")
+#
+# print(get_row(test_state.board, (2,3)))
