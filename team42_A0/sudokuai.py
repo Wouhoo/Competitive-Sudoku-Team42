@@ -26,13 +26,15 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         scores = {}
         for i, move in enumerate(legal_moves):
             new_state = _make_move(game_state, move)
-            # TODO Currently hardcodes search depth to 1, implement iterative deepening.
-            score = _minimax(new_state, depth=0, is_maximizing=True)
+            # TODO Currently hardcodes search depth to 5, implement iterative deepening.
+            score = _minimax(new_state, depth=4, is_maximizing=game_state.current_player == 1)
             scores[i] = score
 
-        # Sort indices for legal_moves by score in decreasing order
-        best_move_idx = sorted(scores, key=scores.get, reverse=True)[0]
-        self.propose_move(legal_moves[best_move_idx])
+        # If all scores are the same, keep the random move.
+        if len(set(scores.values())) > 1:
+            # Sort indices for legal_moves by score in decreasing order
+            best_move_idx = sorted(scores, key=scores.get, reverse=True)[0]
+            self.propose_move(legal_moves[best_move_idx])
 
 
 # Naive minimax evaluation function for a given search depth.
