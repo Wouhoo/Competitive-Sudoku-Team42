@@ -23,20 +23,38 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         # Make sure we have an initial valid move, otherwise we lose the game.
         self.propose_move(random.choice(legal_moves))
 
-        is_maximizing = game_state.current_player == 1
-        scores = {}
-        for i, move in enumerate(legal_moves):
-            new_state = _make_move(game_state, move)
-            # TODO Currently hardcodes search depth, implement iterative deepening.
-            score = _minimax(new_state, depth=8, is_maximizing=is_maximizing)
-            scores[i] = score
+        current_depth = 1
+        while True:
+            self.propose_move(_find_best_move(game_state, current_depth))
+            current_depth += 1
 
-        # If all scores are the same, keep the random move.
-        if len(set(scores.values())) > 1:
-            # Sort indices for legal_moves by score in decreasing order
-            ranked_move_idxs = sorted(scores, key=scores.get, reverse=True)
-            best_move_idx = ranked_move_idxs[0] if is_maximizing else ranked_move_idxs[-1]
-            self.propose_move(legal_moves[best_move_idx])
+def _find_best_move(game_state: GameState, depth: int) -> Move:
+    """Find move using minimax for a given depth.
+
+    Args:
+          game_state: state of the game to find a move for.
+          depth: depth of the search tree to explore (> 0).
+
+    Returns:
+          The move with the highest score, or a random move if all moves are equally good.
+    """
+    legal_moves = check_legal_moves(game_state)
+
+    is_maximizing = game_state.current_player == 1
+    scores = {}
+    for i, move in enumerate(legal_moves):
+        new_state = _make_move(game_state, move)
+        score = _minimax(new_state, depth=depth - 1, is_maximizing=not is_maximizing)
+        scores[i] = score
+
+    # If all scores are the same, keep the random move.
+    if len(set(scores.values())) > 1:
+        # Sort indices for legal_moves by score in decreasing order
+        ranked_move_idxs = sorted(scores, key=scores.get, reverse=True)
+        best_move_idx = ranked_move_idxs[0] if is_maximizing else ranked_move_idxs[-1]
+        return legal_moves[best_move_idx]
+    else:
+        return random.choice(legal_moves)
 
 
 # Naive minimax evaluation function for a given search depth.
@@ -47,6 +65,9 @@ def _minimax(game_state: GameState, depth: int, is_maximizing: bool):
         game_state: state of the game to score.
         depth: depth of the state tree to evaluate (>= 0).
         is_maximizing: whether the evaluation is for the maximizing player.
+
+    Returns:
+        Score for the given state.
     """
     legal_moves = check_legal_moves(game_state)
     if depth == 0 or len(legal_moves) == 0:
@@ -66,6 +87,9 @@ def _make_move(game_state: GameState, move: Move) -> GameState:
     Args:
         game_state: State of the game before the move.
         move: The move to make. Move is assumed to be valid.
+
+    Returns:
+        The next state that follows from performing the given move.
     """
     new_state = copy.deepcopy(game_state)
     new_state.board.put(move.square, move.value)
