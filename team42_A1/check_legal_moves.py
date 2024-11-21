@@ -1,13 +1,14 @@
 from competitive_sudoku.sudoku import GameState, Move, SudokuBoard, TabooMove, Square
 
-def check_legal_moves(game_state: GameState) -> list[Move]:
+def get_legal_moves(game_state: GameState) -> list[Move]: # TODO: Rename to get_legal_moves
     """
-    Checks which moves are legal for the given game state and return them as a list of Moves
+    Checks which moves are legal for the given game state, and return them as a list of Moves.
     """
     N = game_state.board.N
     allowed_squares = GameState.player_squares(game_state)
+    if allowed_squares is None:   # if allowed_squares is None, then every square is an allowed square
+        allowed_squares = full_board(game_state.board)
     legal_moves = []
-    # if allowed_squares is None: then every square is an allowed square
     
     # Iterate over all possible moves ((square, value) pairs)
     for square in allowed_squares:
@@ -20,27 +21,29 @@ def check_legal_moves(game_state: GameState) -> list[Move]:
                 continue
             if value in get_column(game_state.board, square):
                 continue
-            if value in get_region(game_state.board, square):
+            if value in get_block(game_state.board, square):
                 continue
             # Otherwise, add move to legal moves
             legal_moves.append(Move(square, value))
         
     return legal_moves
 
-def get_full_board(game_state: GameState) -> list[Square]:
-    # Returns all squares on the board
-    return []
+def full_board(game_state: GameState) -> list[Square]:
+    '''Returns all unoccupied squares on the board'''
+    empty_board = [(i,j) for i in range(game_state.board.N) for j in range(game_state.board.N)]
+    occupied_squares = set(game_state.occupied_squares1 + game_state.occupied_squares2)
+    return [square for square in empty_board if square not in occupied_squares]
 
 def get_row(board: SudokuBoard, square: Square) -> list[int]:
-    # Returns all numbers present in the row that square is in
+    '''Returns all numbers present in the row that square is in'''
     return [board.get((square[0], j)) for j in range(board.N)]
 
 def get_column(board: SudokuBoard, square: Square) -> list[int]:
-    # Returns all numbers present in the column that square is in
+    '''Returns all numbers present in the column that square is in'''
     return [board.get((i, square[1])) for i in range(board.N)]
 
-def get_region(board: SudokuBoard, square: Square) -> list[int]:
-    # Returns all numbers present in the region that square is in
+def get_block(board: SudokuBoard, square: Square) -> list[int]: # TODO: rename to get_block
+    '''Returns all numbers present in the region that square is in'''
     region_row, region_col = square[0]//board.m * board.m, square[1]//board.n * board.n
     return [board.get((region_row + i, region_col + j)) for j in range(board.n) for i in range(board.m)]
 
