@@ -3,6 +3,7 @@
 #  https://www.gnu.org/licenses/gpl-3.0.txt)
 
 import copy
+import math
 import random
 
 import competitive_sudoku.sudokuai
@@ -44,7 +45,7 @@ def _find_best_move(game_state: GameState, depth: int) -> Move:
     scores = {}
     for i, move in enumerate(legal_moves):
         new_state = _make_move(game_state, move)
-        score = _minimax(new_state, depth=depth - 1, is_maximizing=not is_maximizing)
+        score = _minimax_alphabeta(new_state, depth=depth - 1, is_maximizing=not is_maximizing)
         scores[i] = score
 
     # If all scores are the same, keep the random move.
@@ -56,14 +57,16 @@ def _find_best_move(game_state: GameState, depth: int) -> Move:
     else:
         return random.choice(legal_moves)
 
-
-# Naive minimax evaluation function for a given search depth.
-def _minimax(game_state: GameState, depth: int, is_maximizing: bool):
-    """Implementation of the minimax scoring function.
+def _minimax_alphabeta(
+        game_state: GameState, depth: int, alpha: float = -math.inf, beta: float = math.inf, is_maximizing: bool = True
+) -> float:
+    """Implementation of the minimax scoring function with alpa-beta pruning.
 
     Args:
         game_state: state of the game to score.
         depth: depth of the state tree to evaluate (>= 0).
+        alpha: alpha value for alpha-beta pruning, -inf for initial call.
+        beta: beta value for alpha-beta pruning, inf for initial call.
         is_maximizing: whether the evaluation is for the maximizing player.
 
     Returns:
@@ -73,11 +76,24 @@ def _minimax(game_state: GameState, depth: int, is_maximizing: bool):
     if depth == 0 or len(legal_moves) == 0:
         return evaluate_state(game_state)
 
-    value, value_func = (-1e9, max) if is_maximizing else (1e9, min)
-    for move in legal_moves:
-        new_state = _make_move(game_state, move)
-        value = value_func(value, _minimax(new_state, depth - 1, not is_maximizing))
-    return value
+    if is_maximizing:
+        value = -math.inf
+        for move in legal_moves:
+            new_state = _make_move(game_state, move)
+            value = max(value, _minimax_alphabeta(new_state, depth - 1, alpha, beta, not is_maximizing))
+            alpha = max(alpha, value)
+            if value >= beta:
+                break
+        return value
+    else:
+        value = math.inf
+        for move in legal_moves:
+            new_state = _make_move(game_state, move)
+            value = min(value, _minimax_alphabeta(new_state, depth - 1, alpha, beta, not is_maximizing))
+            beta = min(beta, value)
+            if value <= alpha:
+                break
+        return value
 
 
 def _make_move(game_state: GameState, move: Move) -> GameState:
