@@ -1,6 +1,6 @@
 from competitive_sudoku.sudoku import GameState, Move, SudokuBoard, TabooMove, Square
 
-def get_legal_moves(game_state: GameState) -> list[Move]: # TODO: Rename to get_legal_moves
+def get_legal_moves(game_state: GameState) -> list[Move]:
     """
     Checks which moves are legal for the given game state, and return them as a list of Moves.
     """
@@ -23,7 +23,7 @@ def get_legal_moves(game_state: GameState) -> list[Move]: # TODO: Rename to get_
                 continue
             if value in get_block(game_state.board, square):
                 continue
-            # Otherwise, add move to legal moves
+            # If not, add move to legal moves
             legal_moves.append(Move(square, value))
         
     return legal_moves
@@ -42,7 +42,7 @@ def get_column(board: SudokuBoard, square: Square) -> list[int]:
     '''Returns all numbers present in the column that square is in'''
     return [board.get((i, square[1])) for i in range(board.N)]
 
-def get_block(board: SudokuBoard, square: Square) -> list[int]: # TODO: rename to get_block
+def get_block(board: SudokuBoard, square: Square) -> list[int]:
     '''Returns all numbers present in the region that square is in'''
     region_row, region_col = square[0]//board.m * board.m, square[1]//board.n * board.n
     return [board.get((region_row + i, region_col + j)) for j in range(board.n) for i in range(board.m)]
