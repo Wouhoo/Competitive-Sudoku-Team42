@@ -48,14 +48,12 @@ def _find_best_move(game_state: GameState, depth: int) -> Move:
         score = _minimax_alphabeta(new_state, depth=depth - 1, is_maximizing=not is_maximizing)
         scores[i] = score
 
-    # If all scores are the same, keep the random move.
-    if len(set(scores.values())) > 1:
-        # Sort indices for legal_moves by score in decreasing order
-        ranked_move_idxs = sorted(scores, key=scores.get, reverse=True)
-        best_move_idx = ranked_move_idxs[0] if is_maximizing else ranked_move_idxs[-1]
-        return legal_moves[best_move_idx]
-    else:
-        return random.choice(legal_moves)
+    # Sort indices for legal_moves by score in decreasing order
+    ranked_move_idxs = sorted(scores, key=scores.get, reverse=True)
+    best_score = scores[ranked_move_idxs[0]] if is_maximizing else scores[ranked_move_idxs[-1]]
+    best_moves = [move_idx for move_idx, score in scores.items() if score == best_score]
+    return legal_moves[random.choice(best_moves)]
+
 
 def _minimax_alphabeta(
         game_state: GameState, depth: int, alpha: float = -math.inf, beta: float = math.inf, is_maximizing: bool = True
