@@ -10,6 +10,7 @@ import competitive_sudoku.sudokuai
 from competitive_sudoku.sudoku import GameState, Move, SudokuBoard
 from .check_legal_moves import get_legal_moves, get_row, get_column, get_block
 from .evaluation import evaluate_state
+from .competitive_heuristics import wall_heuristic
 
 
 class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
@@ -20,9 +21,9 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         super().__init__()
 
     def compute_best_move(self, game_state: GameState) -> None:
-        legal_moves = get_legal_moves(game_state)
+        good_moves = wall_heuristic(get_legal_moves(game_state), game_state)
         # Make sure we have an initial valid move, otherwise we lose the game.
-        self.propose_move(random.choice(legal_moves))
+        self.propose_move(random.choice(good_moves))
 
         current_depth = 1
         while True:
@@ -39,20 +40,20 @@ def _find_best_move(game_state: GameState, depth: int) -> Move:
     Returns:
           The move with the highest score, or a random move if all moves are equally good.
     """
-    legal_moves = get_legal_moves(game_state)
+    good_moves = wall_heuristic(get_legal_moves(game_state), game_state)
 
     is_maximizing = game_state.current_player == 1
     scores = {}
-    for i, move in enumerate(legal_moves):
+    for i, move in enumerate(good_moves):
         new_state = _make_move(game_state, move)
         score = _minimax_alphabeta(new_state, depth=depth - 1, is_maximizing=not is_maximizing)
         scores[i] = score
 
-    # Sort indices for legal_moves by score in decreasing order
+    # Sort indices for good_moves by score in decreasing order
     ranked_move_idxs = sorted(scores, key=scores.get, reverse=True)
     best_score = scores[ranked_move_idxs[0]] if is_maximizing else scores[ranked_move_idxs[-1]]
     best_moves = [move_idx for move_idx, score in scores.items() if score == best_score]
-    return legal_moves[random.choice(best_moves)]
+    return good_moves[random.choice(best_moves)]
 
 
 def _minimax_alphabeta(
@@ -70,13 +71,13 @@ def _minimax_alphabeta(
     Returns:
         Score for the given state.
     """
-    legal_moves = get_legal_moves(game_state)
-    if depth == 0 or len(legal_moves) == 0:
+    good_moves = wall_heuristic(get_legal_moves(game_state), game_state)
+    if depth == 0 or len(good_moves) == 0:
         return evaluate_state(game_state)
 
     if is_maximizing:
         value = -math.inf
-        for move in legal_moves:
+        for move in good_moves:
             new_state = _make_move(game_state, move)
             value = max(value, _minimax_alphabeta(new_state, depth - 1, alpha, beta, not is_maximizing))
             alpha = max(alpha, value)
@@ -85,7 +86,7 @@ def _minimax_alphabeta(
         return value
     else:
         value = math.inf
-        for move in legal_moves:
+        for move in good_moves:
             new_state = _make_move(game_state, move)
             value = min(value, _minimax_alphabeta(new_state, depth - 1, alpha, beta, not is_maximizing))
             beta = min(beta, value)
