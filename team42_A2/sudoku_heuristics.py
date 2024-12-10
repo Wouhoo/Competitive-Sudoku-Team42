@@ -23,11 +23,11 @@ def sudoku_heuristics(moves: list[Move], game_state: GameState) -> list[Move]:
         else:
             moves_dict[move.square].add(move.value)
 
-    new_moves = subgroup_exclusion(moves_dict, game_state.board)
+    new_moves = only_squares_rule(moves_dict, game_state.board)
     # hidden_pair and naked_pair did not perform well on the smallest board size.
     if game_state.board.N > 4:
-        new_moves = hidden_twin(new_moves, game_state.board, group_size=2)
-        new_moves = naked_twin(new_moves, game_state.board, group_size=2)
+        new_moves = hidden_twin_rule(new_moves, game_state.board, group_size=2)
+        new_moves = naked_twin_rule(new_moves, game_state.board, group_size=2)
 
     # Convert the resulting moves dict back into a list of moves.
     out = []
@@ -38,7 +38,7 @@ def sudoku_heuristics(moves: list[Move], game_state: GameState) -> list[Move]:
     return out
 
 
-def subgroup_exclusion(moves: dict, board: SudokuBoard) -> dict:
+def only_squares_rule(moves: dict, board: SudokuBoard) -> dict:
     """Applies the subgroup exclusion rule from SudokuDragon.
 
     Args:
@@ -81,7 +81,7 @@ def subgroup_exclusion(moves: dict, board: SudokuBoard) -> dict:
     return out
 
 
-def hidden_twin(moves: dict, board: SudokuBoard, group_size=2) -> dict:
+def hidden_twin_rule(moves: dict, board: SudokuBoard, group_size=2) -> dict:
     """Applies the hidden-twin rule from SudokuDragon.
 
     Args:
@@ -128,7 +128,7 @@ def hidden_twin(moves: dict, board: SudokuBoard, group_size=2) -> dict:
     return out
 
 
-def naked_twin(moves: dict, board: SudokuBoard, group_size=2) -> dict:
+def naked_twin_rule(moves: dict, board: SudokuBoard, group_size=2) -> dict:
     """Applies the hidden-twin rule from SudokuDragon.
 
     Args:
