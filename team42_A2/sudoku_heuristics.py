@@ -39,7 +39,7 @@ def sudoku_heuristics(moves: list[Move], game_state: GameState) -> list[Move]:
 
 
 def only_squares_rule(moves: dict, board: SudokuBoard) -> dict:
-    """Applies the subgroup exclusion rule from SudokuDragon.
+    """Applies the only squares rule from SudokuDragon.
 
     Args:
         moves: dictionary of suggested moves (square -> set of suggested values).
