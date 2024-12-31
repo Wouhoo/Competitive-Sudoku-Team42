@@ -1,0 +1,21 @@
+team42_A2 - greedy_player 0-1
+
+greedy_player - team42_A2 0-1
+
+team42_A2 - greedy_player 1-0
+
+greedy_player - team42_A2 1-0
+
+team42_A2 - greedy_player 1-0
+
+greedy_player - team42_A2 0-1
+
+team42_A2 - greedy_player 1-0
+
+greedy_player - team42_A2 0-1
+
+team42_A2 - greedy_player 1-0
+
+greedy_player - team42_A2 0-1
+
+Match result: team42_A2 - greedy_player 8-2

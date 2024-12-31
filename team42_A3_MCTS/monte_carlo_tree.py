@@ -4,7 +4,7 @@ import math
 import random
 
 from competitive_sudoku.sudoku import GameState, Move, SudokuBoard
-from team42_MCT.check_legal_moves import get_legal_moves, get_row, get_column, get_block
+from team42_A3_MCTS.check_legal_moves import get_legal_moves, get_row, get_column, get_block
 
 EXPLORATION_FACTOR = 2
 
@@ -33,12 +33,13 @@ class Node:
                 "|" + str(self.player1_wins) + "-" + str(self.player2_wins)) + "|Player:" +
                 str(self.game_state.current_player))
 
-class MonteCarloTree:
 
+class MonteCarloTree:
     def __init__(self, game_state: GameState):
         self.root = Node(None, game_state)
 
-    #Traverses the MCT by exploring the greatest UCT scores. Returns the leaf node that the path leads.
+    ### STEP 1: Leaf selection ### 
+    # Traverse the MCT by exploring the children with the greatest UCT scores. Returns the leaf node that this path leads to.
     def traverse(self) -> Node:
         curr_node = self.root
 
@@ -49,33 +50,27 @@ class MonteCarloTree:
                 if best_score < child.uct_score:
                     best_score = child.uct_score
                     best_node = child
-            curr_node.visit_count += 1
+            curr_node.visit_count += 1  # W: Upping the visit count here is not how it's done in the lecture slides
             curr_node = best_node
         curr_node.visit_count += 1
         return curr_node
 
-    #Expands given node and picks one of its children for simulation. Returns given leaf node if can't be expanded.
+    ### STEP 2: Leaf expansion ###
+    # Expand given node and pick one of its children for simulation. Returns given leaf node if can't be expanded.
     def expand(self, selected_node: Node) -> Node:
-
         moves = get_legal_moves(selected_node.game_state)
 
-        #If we try to expand a terminal state, pass the state for simulation instead.
-        first_child = None if len(moves) > 0 else selected_node
         #Expand selected node with all possible moves.
         for move in moves:
             child = Node(move, _make_move(selected_node.game_state, move))
             selected_node.add_child(child)
 
-            #Select first child as a random choice for simulation.
-            if first_child is None:
-                first_child = child
+        # NOTE by Wouter: Nick's version always chose the first child as the node to expand; picking a random one instead should hopefully make the agent a little less predictable.
+        return random.choice(selected_node.children) if len(selected_node.children) > 0 else selected_node
 
-        return first_child
-
-
-    #Simulate the selected node's game state till a final state by making random moves. Return the winner (1 or 2)
-    # or 0 for draw
-    #TODO: Predict winners for slightly faster simulations.
+    ### STEP 3: Simulation ###
+    # Simulate the selected node's game state till a final state by making random moves. Return the winner (1 or 2), or 0 for draw
+    # TODO: Predict winners (using e.g. simplified rules or an evaluation function) for faster simulations.
     def simulate(self, selected_node: Node) -> int:
         current_game_state = selected_node.game_state
 
@@ -99,12 +94,12 @@ class MonteCarloTree:
                 else:
                     player2_out_of_moves = True
                 continue
+            # Play a random legal move
             current_game_state = _make_move(current_game_state, random.choice(legal_moves))
 
-
-    #Back Propagate by visiting parent node of the simulated node. On each step update variables and scores.
+    ### STEP 4: Backpropagation ###
+    # Backpropagate by visiting ancestors of the simulated node. On each step update variables and scores.
     def backpropagate(self, simulated_node: Node, winner: int, player: int):
-
         current_node = simulated_node
         #Visit count increases during traversal. The simulated node ONLY increases its count on the backprop.
         current_node.visit_count += 1
@@ -114,7 +109,9 @@ class MonteCarloTree:
                 current_node.player1_wins += 1
             elif winner == 2:
                 current_node.player2_wins += 1
-            #TODO: Figure out UCT score modification on ties. No one wins on ties at the moment.
+            elif winner == 0:  # Ties add 0.5 wins to both players
+                current_node.player1_wins += 0.5
+                current_node.player2_wins += 0.5
             else:
                 pass
             current_node.uct_score = _calculate_score(current_node, player)
@@ -131,7 +128,9 @@ def _calculate_score(node: Node, player: int) -> float:
     if player == 1:
         q = -node.player1_wins if node.game_state.current_player == 1 else node.player1_wins
     else:
-        q = -node.player2_wins if node.game_state.current_player == 1 else node.player2_wins
+        q = -node.player2_wins if node.game_state.current_player == 1 else node.player2_wins 
+    #q = -node.player1_wins if node.game_state.current_player == 1 else node.player1_wins  # W: This is the lecture slides formula, but this indeed does not take into account which player we are
+
     n = node.visit_count
     ln_n = math.log(node.parent.visit_count)
 

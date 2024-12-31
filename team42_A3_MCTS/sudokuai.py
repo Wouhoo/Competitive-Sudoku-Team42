@@ -33,8 +33,7 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
             result = MCT.simulate(selected_node)
             MCT.backpropagate(selected_node, result, our_player_id)
             self.propose_move(_get_best_move(MCT, True))
-
-
+            #print(_get_best_move(MCT, True)) # TEST
 
 
 def _get_best_move(tree: MonteCarloTree, is_robust: bool = False) -> Move:
@@ -45,7 +44,7 @@ def _get_best_move(tree: MonteCarloTree, is_robust: bool = False) -> Move:
         #print(child.to_string())
         if child.visit_count == 0:
             continue
-        score = child.player1_wins if is_robust else (child.player1_wins/child.visit_count)
+        score = child.visit_count if is_robust else (child.player1_wins/child.visit_count)
         if score > bestScore:
             bestScore = score
             bestChild = child

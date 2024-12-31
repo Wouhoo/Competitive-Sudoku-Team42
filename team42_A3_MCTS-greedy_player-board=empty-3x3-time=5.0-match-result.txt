@@ -1,0 +1,21 @@
+team42_A3_MCTS - greedy_player 0-1
+
+greedy_player - team42_A3_MCTS 0-1
+
+team42_A3_MCTS - greedy_player 0-1
+
+greedy_player - team42_A3_MCTS 0-1
+
+team42_A3_MCTS - greedy_player 1-0
+
+greedy_player - team42_A3_MCTS 1-0
+
+team42_A3_MCTS - greedy_player 0-1
+
+greedy_player - team42_A3_MCTS 0-1
+
+team42_A3_MCTS - greedy_player 0-1
+
+greedy_player - team42_A3_MCTS 0-1
+
+Match result: team42_A3_MCTS - greedy_player 5-5
