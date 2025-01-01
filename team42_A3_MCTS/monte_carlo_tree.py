@@ -4,14 +4,20 @@ import math
 import random
 
 from competitive_sudoku.sudoku import GameState, Move, SudokuBoard
-from team42_A3_MCTS.check_legal_moves import get_legal_moves, get_row, get_column, get_block
+from team42_A3_MCTS.check_legal_moves import (
+    get_legal_moves,
+    get_row,
+    get_column,
+    get_block,
+)
 
 EXPLORATION_FACTOR = 2
+
 
 class Node:
     ID_ITER = itertools.count()
 
-    def __init__(self, move: Move, game_state: GameState):
+    def __init__(self, move: Move | None, game_state: GameState):
         self.id = next(self.ID_ITER)
         self.move = move
         self.game_state = game_state
@@ -22,72 +28,87 @@ class Node:
         self.children = []
         self.parent = None
 
+    def __repr__(self):
+        parent = self.parent.id if self.parent is not None else "IS ROOT"
+        return (
+            f"{self.id}-{self.move} | {parent} | Score:{self.uct_score} | Visits:{self.visit_count} | "
+            f"{self.player1_wins}-{self.player2_wins} | Player:{self.game_state.current_player}"
+        )
+
     def add_child(self, child_node):
         child_node.parent = self
         self.children.append(child_node)
-
-    def to_string(self):
-        return (((str(self.id) + "-" + str(self.move) + "| " +
-                (str(self.parent.id) if self.parent is not None else "IS ROOT") +
-                "|Score:" + str(self.uct_score)) + "|Visits:" + str(self.visit_count) +
-                "|" + str(self.player1_wins) + "-" + str(self.player2_wins)) + "|Player:" +
-                str(self.game_state.current_player))
 
 
 class MonteCarloTree:
     def __init__(self, game_state: GameState):
         self.root = Node(None, game_state)
 
-    ### STEP 1: Leaf selection ### 
-    # Traverse the MCT by exploring the children with the greatest UCT scores. Returns the leaf node that this path leads to.
     def traverse(self) -> Node:
+        """
+        STEP 1: Leaf selection
+        Traverse the MCT by exploring the children with the greatest UCT scores.
+        Returns the leaf node that this path leads to.
+        """
         curr_node = self.root
 
         while len(curr_node.children) > 0:
             best_score = -math.inf
             best_node = None
-            for child in curr_node.children:
+            # Shuffle the children to randomize the order in which we visit new children.
+            for child in random.sample(curr_node.children, len(curr_node.children)):
                 if best_score < child.uct_score:
                     best_score = child.uct_score
                     best_node = child
-            curr_node.visit_count += 1  # W: Upping the visit count here is not how it's done in the lecture slides
             curr_node = best_node
-        curr_node.visit_count += 1
+
         return curr_node
 
-    ### STEP 2: Leaf expansion ###
-    # Expand given node and pick one of its children for simulation. Returns given leaf node if can't be expanded.
     def expand(self, selected_node: Node) -> Node:
+        """
+        STEP 2: Leaf expansion
+        Expand given node and pick one of its children for simulation.
+        Returns given leaf node if it can't be expanded.
+        """
         moves = get_legal_moves(selected_node.game_state)
+        moves = _remove_duplicates(moves)
 
-        #Expand selected node with all possible moves.
+        # Expand selected node with all possible moves.
         for move in moves:
             child = Node(move, _make_move(selected_node.game_state, move))
             selected_node.add_child(child)
 
         # NOTE by Wouter: Nick's version always chose the first child as the node to expand; picking a random one instead should hopefully make the agent a little less predictable.
-        return random.choice(selected_node.children) if len(selected_node.children) > 0 else selected_node
+        return random.choice(selected_node.children) if moves else selected_node
 
-    ### STEP 3: Simulation ###
-    # Simulate the selected node's game state till a final state by making random moves. Return the winner (1 or 2), or 0 for draw
-    # TODO: Predict winners (using e.g. simplified rules or an evaluation function) for faster simulations.
     def simulate(self, selected_node: Node) -> int:
+        """
+        STEP 3: Simulation
+        Simulate the selected node's game state till a final state by making random moves.
+        Return the winner (1 or 2), or 0 for draw.
+        """
         current_game_state = selected_node.game_state
 
         player1_out_of_moves = False
         player2_out_of_moves = False
         while True:
-            #Condtion 1: Both players are out of moves; End of game.
+            # Condtion 1: Both players are out of moves; End of game.
             if player1_out_of_moves and player2_out_of_moves:
-                score_difference = (current_game_state.scores[0] - current_game_state.scores[1])
+                score_difference = (
+                    current_game_state.scores[0] - current_game_state.scores[1]
+                )
                 return 1 if score_difference > 0 else 2 if score_difference < 0 else 0
-            #Condition 2: The current player is out of moves. Switch to the other player.
-            if (current_game_state.current_player == 1 and player1_out_of_moves) or (current_game_state.current_player == 2 and player2_out_of_moves):
-                current_game_state.current_player = 3 - current_game_state.current_player
+            # Condition 2: The current player is out of moves. Switch to the other player.
+            if (current_game_state.current_player == 1 and player1_out_of_moves) or (
+                current_game_state.current_player == 2 and player2_out_of_moves
+            ):
+                current_game_state.current_player = (
+                    3 - current_game_state.current_player
+                )
 
-            #Generate all legal moves of current player.
+            # Generate all legal moves of current player.
             legal_moves = get_legal_moves(current_game_state)
-            #If no legal moves exists, mark the player as unable to move and restart the loop.
+            # If no legal moves exists, mark the player as unable to move and restart the loop.
             if len(legal_moves) == 0:
                 if current_game_state.current_player == 1:
                     player1_out_of_moves = True
@@ -95,16 +116,20 @@ class MonteCarloTree:
                     player2_out_of_moves = True
                 continue
             # Play a random legal move
-            current_game_state = _make_move(current_game_state, random.choice(legal_moves))
+            current_game_state = _make_move(
+                current_game_state, random.choice(legal_moves)
+            )
 
-    ### STEP 4: Backpropagation ###
-    # Backpropagate by visiting ancestors of the simulated node. On each step update variables and scores.
     def backpropagate(self, simulated_node: Node, winner: int, player: int):
+        """
+        STEP 4: Backpropagation
+        Backpropagate by visiting ancestors of the simulated node.
+        On each step update variables and scores.
+        """
         current_node = simulated_node
-        #Visit count increases during traversal. The simulated node ONLY increases its count on the backprop.
-        current_node.visit_count += 1
 
         while current_node is not None:
+            current_node.visit_count += 1
             if winner == 1:
                 current_node.player1_wins += 1
             elif winner == 2:
@@ -118,27 +143,21 @@ class MonteCarloTree:
             current_node = current_node.parent
 
 
-#Calculates the UCT score of given Node
 def _calculate_score(node: Node, player: int) -> float:
-    #Ignore calls on root.
+    """Calculate the UCT score of a given Node."""
+    # Ignore calls on root.
     if node.parent is None:
         return 0
 
-    q = math.inf
-    if player == 1:
-        q = -node.player1_wins if node.game_state.current_player == 1 else node.player1_wins
-    else:
-        q = -node.player2_wins if node.game_state.current_player == 1 else node.player2_wins 
-    #q = -node.player1_wins if node.game_state.current_player == 1 else node.player1_wins  # W: This is the lecture slides formula, but this indeed does not take into account which player we are
+    modifier = -1 if node.game_state.current_player == 1 else 1
+    q = modifier * node.player1_wins if player == 1 else modifier * node.player2_wins
 
     n = node.visit_count
-    ln_n = math.log(node.parent.visit_count)
-
     if n == 0:
         return math.inf
 
-    return (q/n) + EXPLORATION_FACTOR * math.sqrt(ln_n / n)
-
+    ln_n = math.log(node.parent.visit_count)
+    return (q / n) + EXPLORATION_FACTOR * math.sqrt(ln_n / n)
 
 
 def _make_move(game_state: GameState, move: Move) -> GameState:
@@ -167,6 +186,7 @@ def _make_move(game_state: GameState, move: Move) -> GameState:
     new_state.current_player = 3 - new_state.current_player
     return new_state
 
+
 def _move_score(board: SudokuBoard, square: tuple[int, int]) -> int:
     """Compute the score for the most recent move 'square' and a given board."""
     score = [0, 1, 3, 7]
@@ -178,3 +198,18 @@ def _move_score(board: SudokuBoard, square: tuple[int, int]) -> int:
         n_filled += is_filled
 
     return score[n_filled]
+
+
+def _remove_duplicates(moves: list[Move]) -> list[Move]:
+    """If there are multiple values for a square, pick one randomly."""
+    moves_dict = {}  # square -> [values]
+    for move in moves:
+        if move.square not in moves_dict:
+            moves_dict[move.square] = [move.value]
+        else:
+            moves_dict[move.square].append(move.value)
+
+    pruned_moves = []
+    for square, values in moves_dict.items():
+        pruned_moves.append(Move(square, random.choice(values)))
+    return pruned_moves
