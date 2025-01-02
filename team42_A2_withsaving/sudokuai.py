@@ -31,12 +31,21 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         pruned = [move for move in initial_moves if move not in good_moves]
 
         current_depth = 1
+        # save_data stores information relating to the current phase of the wall strategy between game tree nodes (in memory).
+        # This is useful so we don't have to scan the board every time to determine the phase.
+        # With file I/O, the phase can also be saved at the end of a turn and loaded at the start of the next turn.
+        save_data = self.load() # WITH FILE I/O
+        #save_data = None         # WITHOUT FILE I/O
+        our_player = game_state.current_player
         while True:
-            self.propose_move(_find_best_move(self, game_state, current_depth, pruned))
+            best_move, save_data = _find_best_move(game_state, save_data, our_player, current_depth, pruned)
+            self.propose_move(best_move)
+            print(save_data)  # TEST
+            self.save(save_data) # WITH FILE I/O
             current_depth += 1
 
 
-def _find_best_move(sudokuai: SudokuAI, game_state: GameState, depth: int, pruned) -> Move:
+def _find_best_move(game_state: GameState, save_data: dict, our_player: int, depth: int, pruned, ) -> tuple[Move, dict]:
     """Find move using minimax for a given depth.
 
     Args:
@@ -46,36 +55,38 @@ def _find_best_move(sudokuai: SudokuAI, game_state: GameState, depth: int, prune
     Returns:
           The move with the highest score, or a random move if all moves are equally good.
     """
-    initial_moves = wall_heuristic(sudokuai, get_legal_moves(game_state), game_state)
+    initial_moves, save_data = wall_heuristic(get_legal_moves(game_state), game_state, save_data)
     good_moves = [move for move in initial_moves if move not in pruned]
 
     is_maximizing = game_state.current_player == 1
     scores = {}
     for i, move in enumerate(good_moves):
         new_state = _make_move(game_state, move)
-        score = _minimax_alphabeta(
-            sudokuai, new_state, depth=depth - 1, is_maximizing=not is_maximizing, pruned=pruned
+        score, save_data = _minimax_alphabeta(
+            new_state, save_data, our_player, depth=depth - 1, is_maximizing=not is_maximizing, pruned=pruned
         )
-        scores[i] = score
+        scores[i] = (score, save_data)
 
     # Sort indices for good_moves by score in decreasing order
     ranked_move_idxs = sorted(scores, key=scores.get, reverse=True)
     best_score = (
-        scores[ranked_move_idxs[0]] if is_maximizing else scores[ranked_move_idxs[-1]]
+        scores[ranked_move_idxs[0]][0] if is_maximizing else scores[ranked_move_idxs[-1]][0]
     )
-    best_moves = [move_idx for move_idx, score in scores.items() if score == best_score]
-    return good_moves[random.choice(best_moves)]
+    best_moves = [(move_idx, save_data) for move_idx, score in scores.items() if score[0] == best_score]
+    chosen_move = random.choice(best_moves)
+    return good_moves[chosen_move[0]], chosen_move[1]
 
 
 def _minimax_alphabeta(
-    sudokuai: SudokuAI,
     game_state: GameState,
+    save_data: dict,
+    our_player: int,
     depth: int,
     alpha: float = -math.inf,
     beta: float = math.inf,
     is_maximizing: bool = True,
     pruned=(),
-) -> float:
+) -> tuple[float, dict]:
     """Implementation of the minimax scoring function with alpa-beta pruning.
 
     Args:
@@ -89,44 +100,43 @@ def _minimax_alphabeta(
         Score for the given state.
     """
     if depth == 0:
-        return evaluate_state(game_state)
+        return evaluate_state(game_state), save_data
 
-    initial_moves = wall_heuristic(sudokuai, get_legal_moves(game_state), game_state)
+    # Important: for the save/load version of the wall_heuristic, *only our player* must call the wall heuristic function.
+    # For the other player, we will consider all legal moves, filtered by the sudoku heuristics.
+    if(game_state.current_player == our_player):
+        #print("Pre: ", save_data) # TEST
+        initial_moves, save_data = wall_heuristic(get_legal_moves(game_state), game_state, save_data)
+        #print("Post: ", save_data) # TEST
+    else:
+        initial_moves = get_legal_moves(game_state)
     good_moves = [move for move in initial_moves if move not in pruned]
     good_moves = sudoku_heuristics(good_moves, game_state)
     pruned = [move for move in initial_moves if move not in good_moves]
 
     if len(good_moves) == 0:
-        return evaluate_state(game_state)
+        return evaluate_state(game_state), save_data
 
     if is_maximizing:
         value = -math.inf
         for move in good_moves:
             new_state = _make_move(game_state, move)
-            value = max(
-                value,
-                _minimax_alphabeta(
-                    sudokuai, new_state, depth - 1, alpha, beta, not is_maximizing, pruned
-                ),
-            )
+            new_value, save_data = _minimax_alphabeta(new_state, save_data, our_player, depth - 1, alpha, beta, not is_maximizing, pruned)
+            value = max(value, new_value)
             alpha = max(alpha, value)
             if value >= beta:
                 break
-        return value
+        return value, save_data
     else:
         value = math.inf
         for move in good_moves:
             new_state = _make_move(game_state, move)
-            value = min(
-                value,
-                _minimax_alphabeta(
-                    sudokuai, new_state, depth - 1, alpha, beta, not is_maximizing, pruned
-                ),
-            )
+            new_value, save_data = _minimax_alphabeta(new_state, save_data, our_player, depth - 1, alpha, beta, not is_maximizing, pruned)
+            value = min(value, new_value)
             beta = min(beta, value)
             if value <= alpha:
                 break
-        return value
+        return value, save_data
 
 
 def _make_move(game_state: GameState, move: Move) -> GameState:

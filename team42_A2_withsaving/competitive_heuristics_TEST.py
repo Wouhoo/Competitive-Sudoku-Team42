@@ -2,7 +2,7 @@
 from competitive_sudoku.sudoku import GameState, Move
 from competitive_sudoku.sudokuai import SudokuAI
 
-def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) -> tuple[list[Move], dict]:
+def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) -> list[Move]:
     '''
     Filters a list of legal moves based on a heuristic that attempts to "cut off" the opponent.
     Currently this is implemented by first making a vertical line from the middle column,
@@ -14,18 +14,14 @@ def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) ->
     # Read from save data (containing information about the phase of the strategy in the current game state).
     # If no save data is provided, scan the board to see what phase we are in
     if(save_data is None):
-        save_data = {'curr_phase': 1, 'height': 0, 'broke_through_left': False, 'broke_through_right': False}
         #occupied_squares = game_state.occupied_squares1 if game_state.current_player == 1 else game_state.occupied_squares2
-        #opponent_squares = game_state.occupied_squares2 if game_state.current_player == 1 else game_state.occupied_squares1
-        # If we don't occupy any squares not on the middle column, we are in phase 1 (possibly going to phase 2 this turn)
+        # If we don't occupy any squares not on the middle column, we are in phase 1.
         #if(not any((square[1] != board_middle) for square in occupied_squares)):
         #    curr_phase = 1
         #    height = 0
-        #    broke_through_left = any((square[0] <= height and square[1] < board_middle) for square in opponent_squares)
-        #    broke_through_right = any((square[0] <= height and square[1] > board_middle) for square in opponent_squares)
-        # Otherwise, check the height 
+        #    broke_through_left = False
+        #    broke_through_right = False
         #else:
-        #    height = max([square[0] for square in occupied_squares if square[1] == board_middle]) if len(occupied_squares) > 0 else 0
             
         # Otherwise, we are in phase 2 if 
 
@@ -33,11 +29,13 @@ def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) ->
 
             # If this is not the case, but we do occupy squares not on the middle column, we are in phase 2.
             # Otherwise, we are in phase 1.
+
+        save_data = {'curr_phase': 1, 'height': 0, 'left_status': 0, 'right_status': 0}
     
     curr_phase = save_data['curr_phase']      # Keeps track of the current phase of the strategy. 1 = phase a, 2 = phase b/c, 3 = phase d, 4 = basic minimax
     height = save_data['height']              # The middlemost row number reached by the agent
-    broke_through_left = save_data['broke_through_left']    # = 1 if we are currently building the wall to the left, 2 if we finished the wall on the left, 3 if the opponent broke through, 0 otherwise
-    broke_through_right = save_data['broke_through_right']  # same as above
+    left_status = save_data['left_status']    # = 1 if we are currently building the wall to the left, 2 if we finished the wall on the left, 3 if the opponent broke through, 0 otherwise
+    right_status = save_data['right_status']  # same as above
     
     ##### PLAYER 1 #####
     if(game_state.current_player == 1):        
@@ -50,18 +48,102 @@ def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) ->
             if(height >= board_middle or len(filtered_moves) == 0):
                 curr_phase = 2
 
-        ### Check if the opponent's last move has broken through on either side ###
+        ### After phase 1, check if the opponent's last move has broken through on either side ###
         # A status change can only happen if the wall hasn't been finished on that side and the opponent hadn't broken through already
-        try:
+        if(curr_phase > 1):
             last_square = game_state.moves[-1].square
-            broke_through_left = broke_through_left or (last_square[0] <= height and last_square[1] < board_middle)
-            broke_through_right = broke_through_right or (last_square[0] <= height and last_square[1] > board_middle)
-        except:  # To prevent an error on the first move (where there is no last move)
-            pass
+            if(left_status < 2): 
+                left_status = 3 if (last_square[0] <= height and last_square[1] < board_middle) else left_status
+            if(right_status < 2):
+                right_status = 3 if (last_square[0] <= height and last_square[1] < board_middle) else right_status
 
-        ### PHASE B/2: Build out t h e   w a l l ###
+        ### PHASE B/2: Decide which side to start building t h e   w a l l ###
         if(curr_phase == 2):
+            # If the opponent has broken through on both sides, resort to basic minimax
+            if(left_status > 1 and right_status > 1):
+                curr_phase = 6
+            # If the opponent has broken through on one side, but not the other, build on the other side.
+            elif(left_status > 1):
+                right_status = 1
+                curr_phase = 4
+            elif(right_status > 1):
+                left_status = 1
+                curr_phase = 3
+            # Check if we've succesfully chosen a side already; if so, move on to the next phase
+            # (We can't just move on to phase 3 after filtering, since we're never sure if our move actually goes through (it might be taboo))
+            #if(any((square[1] != board_middle) for square in game_state.occupied_squares1)):
+            #    curr_phase = 3
+            else:
+                # Prioritize the side where the opponent has the *fewest* occupied squares.
+                opp_squares_left = len([square for square in game_state.occupied_squares2 if square[1] < board_middle])
+                opp_squares_right = len([square for square in game_state.occupied_squares2 if square[1] > board_middle])
+                middle_moves = [move for move in moves if move.square[0] == height]
+                if(opp_squares_left < opp_squares_right):
+                    left_status = 1
+                    curr_phase = 3
+                else:
+                    right_status = 1
+                    curr_phase = 4
+
+        ### PHASE B/3: Build out t h e   w a l l to the left ###
+        if(curr_phase == 3):
+            # Check if we're done building the wall on the left
+            if(any((square[0] == board_middle and square[1] == 0) for square in game_state.occupied_squares1)):
+                left_status = 2
+            # If we are done on the left (either because we've finished the wall or the opponent broke through), ...
+            if(left_status > 1):
+                # ...build to the right if we weren't done there yet...
+                if(right_status < 2):
+                    right_status = 1
+                    curr_phase = 4
+                # ...or go to phase d if we are done on both sides
+                else:
+                    curr_phase = 5
+            # If we're not done yet, keep building
+            else:
+                filtered_moves = [move for move in moves if move.square[0] == height and move.square[1] < board_middle]
+
+        ### PHASE B/4: Build out t h e   w a l l to the right ###
+        if(curr_phase == 4):
+            # Check if we're done building the wall on the right
+            if(any((square[0] == board_middle and square[1] == game_state.board.N-1) for square in game_state.occupied_squares1)):
+                right_status = 2
+            # If we are done on the right (either because we've finished the wall or the opponent broke through), ...
+            if(right_status > 1):
+                # ...build to the left if we weren't done there yet...
+                if(left_status < 2):
+                    left_status = 1
+                    curr_phase = 3
+                # ...or go to phase d if we are done on both sides
+                else:
+                    curr_phase = 5
+            # If we're not done yet, keep building
+            else:
+                filtered_moves = [move for move in moves if move.square[0] == height and move.square[1] > board_middle]
+
+        ### PHASE D/5 ###
+        # At this point, on both sides of the board, we've either completed our wall there or the enemy broke through.
+        # In this case, allow only moves that *don't* play in captured regions, to deny the enemy as many moves as possible.
+        if(curr_phase == 5):
+            if(left_status == 2 and right_status == 2):
+                filtered_moves = [move for move in moves if move.square[0] > height]
+            elif(left_status == 2):
+                filtered_moves = [move for move in moves if move.square[0] > height or move.square[1] > board_middle]
+            elif(right_status == 2):
+                filtered_moves = [move for move in moves if move.square[0] > height or move.square[1] < board_middle]
+            else:
+                curr_phase = 6
+
+        ### PHASE END/6 ###
+        # At this point the wall strategy has concluded, and we revert back to basic minimax.
+        if(curr_phase == 6):
+            filtered_moves = moves
+
+        ### PHASE B/3: Build out t h e   w a l l to the first chosen side ###
+        # Build out  t h e   w a l l
+        if(curr_phase == 999):
             middle_moves = [move for move in moves if move.square[0] == height]
+
             # If the opponent has broken through on both sides, resort to basic minimax
             if(broke_through_left and broke_through_right):
                 filtered_moves = moves
@@ -69,12 +151,8 @@ def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) ->
             # If the opponent has broken through on one side, but not the other, build on the other side.
             elif(broke_through_left):
                 filtered_moves = [move for move in middle_moves if move.square[1] > board_middle]
-                if(len(filtered_moves) == 0):
-                    curr_phase = 3
             elif(broke_through_right):
                 filtered_moves = [move for move in middle_moves if move.square[1] < board_middle]
-                if(len(filtered_moves) == 0):
-                    curr_phase = 3
             # If the opponent has broken through on neither side, determine which side to prioritize
             else:
                 # If we already started building to the left, continue the wall there
@@ -109,7 +187,7 @@ def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) ->
         ### PHASE 3/D ###
         # At this point, on both sides of the board, we've either completed our wall there or the enemy broke through
         # In this case, allow only moves that *don't* play in captured regions, to deny the enemy as many moves as possible.
-        if(curr_phase == 3):
+        if(curr_phase == 999):
             if(not broke_through_left and not broke_through_right):
                 filtered_moves = [move for move in moves if move.square[0] > height]
             elif(not broke_through_left):
@@ -201,7 +279,7 @@ def wall_heuristic(moves: list[Move], game_state: GameState, save_data: dict) ->
         filtered_moves = moves
 
     # Save save data
-    save_data = {'curr_phase': curr_phase, 'height': height, 'broke_through_left': broke_through_left, 'broke_through_right': broke_through_right}
+    save_data = {'curr_phase': curr_phase, 'height': height, 'left_status': left_status, 'right_status': right_status}
 
     return filtered_moves, save_data
 
