@@ -1,0 +1,21 @@
+team42_A2_withsaving - team42_A1 1-0
+
+team42_A1 - team42_A2_withsaving 0-1
+
+team42_A2_withsaving - team42_A1 1-0
+
+team42_A1 - team42_A2_withsaving 0-1
+
+team42_A2_withsaving - team42_A1 1-0
+
+team42_A1 - team42_A2_withsaving 0-1
+
+team42_A2_withsaving - team42_A1 1-0
+
+team42_A1 - team42_A2_withsaving 0-1
+
+team42_A2_withsaving - team42_A1 1-0
+
+team42_A1 - team42_A2_withsaving 0-1
+
+Match result: team42_A2_withsaving - team42_A1 10-0

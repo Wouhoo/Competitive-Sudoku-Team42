@@ -33,15 +33,16 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         current_depth = 1
         # save_data stores information relating to the current phase of the wall strategy between game tree nodes (in memory).
         # This is useful so we don't have to scan the board every time to determine the phase.
-        # With file I/O, the phase can also be saved at the end of a turn and loaded at the start of the next turn.
-        save_data = self.load() # WITH FILE I/O
-        #save_data = None         # WITHOUT FILE I/O
+        # With file I/O, the phase is also saved at the end of a turn and loaded at the start of the next turn.
+        save_data = self.load()
         our_player = game_state.current_player
+        #("Moves: ", ["({}, {}) -> {}".format(move.square[0], move.square[1], move.value) for move in game_state.moves]) # TEST
+        #print("Taboo moves: ", ["({}, {}) -> {}".format(move.square[0], move.square[1], move.value) for move in game_state.taboo_moves]) # TEST
         while True:
             best_move, save_data = _find_best_move(game_state, save_data, our_player, current_depth, pruned)
             self.propose_move(best_move)
-            print(save_data)  # TEST
-            self.save(save_data) # WITH FILE I/O
+            #print(save_data)  # TEST
+            self.save(save_data)
             current_depth += 1
 
 
