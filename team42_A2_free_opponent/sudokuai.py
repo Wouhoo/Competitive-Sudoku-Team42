@@ -34,7 +34,7 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         our_player = game_state.current_player
         while True:
             self.propose_move(_find_best_move(game_state, our_player, current_depth, pruned))
-            print("Reached depth: ", current_depth)
+            #print("Reached depth: ", current_depth) # TEST
             current_depth += 1
 
 
