@@ -71,14 +71,12 @@ class MonteCarloTree:
         Returns given leaf node if it can't be expanded.
         """
         moves = get_legal_moves(selected_node.game_state)
-        moves = _remove_duplicates(moves)
 
         # Expand selected node with all possible moves.
         for move in moves:
             child = Node(move, _make_move(selected_node.game_state, move))
             selected_node.add_child(child)
 
-        # NOTE by Wouter: Nick's version always chose the first child as the node to expand; picking a random one instead should hopefully make the agent a little less predictable.
         return random.choice(selected_node.children) if moves else selected_node
 
     def simulate(self, selected_node: Node) -> int:

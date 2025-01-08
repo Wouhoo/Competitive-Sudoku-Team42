@@ -22,43 +22,36 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
 
     def compute_best_move(self, game_state: GameState) -> None:
         initial_moves = get_legal_moves(game_state)
+
         # Make sure we have an initial valid move, otherwise we lose the game.
         self.propose_move(random.choice(initial_moves))
 
         our_player_id = game_state.current_player
         # MCT = MonteCarloTree(game_state)
-        MCT = MCTSimplified(game_state)  # Testing the simplified simulation
+        MCT = MCTSimplified(game_state)
 
         # Initial simulation of the root
         result = MCT.simulate(MCT.root)
         MCT.backpropagate(MCT.root, result, our_player_id)
 
-        iteration = 0
         while True:
-            best_leaf_node = MCT.traverse()
-            if best_leaf_node.visit_count == 0:
-                selected_node = best_leaf_node
-            else:
-                selected_node = MCT.expand(best_leaf_node)
+            selected_node = MCT.traverse()
+            if selected_node.visit_count > 0:
+                selected_node = MCT.expand(selected_node)
 
             result = MCT.simulate(selected_node)
             MCT.backpropagate(selected_node, result, our_player_id)
 
-            # Overhead of proposing a move seems to be significant for our simplified simulations.
-            if iteration % 5 == 0:
-                best_move = _get_best_move(MCT, False)
-                self.propose_move(best_move)
-                # print(f"Iteration {iteration}: {best_move}")
-
-            iteration += 1
+            best_move = _get_best_move(MCT)
+            self.propose_move(best_move)
 
 
 def _get_best_move(tree: MonteCarloTree, is_robust: bool = False) -> Move:
     root = tree.root
     bestScore = -math.inf
     bestChild = None
+
     for child in root.children:
-        # print(child)
         if child.visit_count == 0:
             continue
         score = (
@@ -67,5 +60,5 @@ def _get_best_move(tree: MonteCarloTree, is_robust: bool = False) -> Move:
         if score > bestScore:
             bestScore = score
             bestChild = child
-    # print("----------------------")
+
     return bestChild.move
