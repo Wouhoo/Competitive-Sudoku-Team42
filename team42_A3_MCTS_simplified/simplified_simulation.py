@@ -59,7 +59,7 @@ class MCTSimplified(MonteCarloTree):
         return move_tuples[:count]
 
 
-    def simulate(self, selected_node: Node, search_depth=1) -> int:
+    def simulate(self, selected_node: Node, search_depth=0.5) -> int:
         """Simulate a game of random moves that only look at squares, not their values.
 
         Args:

@@ -9,6 +9,7 @@ import competitive_sudoku.sudokuai
 from competitive_sudoku.sudoku import GameState, Move
 from .check_legal_moves import get_legal_moves
 from .monte_carlo_tree import MonteCarloTree
+from .simplified_simulation import MCTSimplified
 
 
 class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
@@ -26,7 +27,8 @@ class SudokuAI(competitive_sudoku.sudokuai.SudokuAI):
         self.propose_move(random.choice(initial_moves))
 
         our_player_id = game_state.current_player
-        MCT = MonteCarloTree(game_state)
+        # MCT = MonteCarloTree(game_state)
+        MCT = MCTSimplified(game_state)
 
         # Initial simulation of the root
         result = MCT.simulate(MCT.root)

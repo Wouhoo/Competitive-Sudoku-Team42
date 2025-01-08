@@ -1,0 +1,21 @@
+team42_A3_MCTS - team42_A3_MCTS_simplified 1-0
+
+team42_A3_MCTS_simplified - team42_A3_MCTS 1-0
+
+team42_A3_MCTS - team42_A3_MCTS_simplified 1-0
+
+team42_A3_MCTS_simplified - team42_A3_MCTS 1-0
+
+team42_A3_MCTS - team42_A3_MCTS_simplified 0-1
+
+team42_A3_MCTS_simplified - team42_A3_MCTS 1-0
+
+team42_A3_MCTS - team42_A3_MCTS_simplified 1-0
+
+team42_A3_MCTS_simplified - team42_A3_MCTS 1-0
+
+team42_A3_MCTS - team42_A3_MCTS_simplified 0-1
+
+team42_A3_MCTS_simplified - team42_A3_MCTS 1-0
+
+Match result: team42_A3_MCTS - team42_A3_MCTS_simplified 3-7
